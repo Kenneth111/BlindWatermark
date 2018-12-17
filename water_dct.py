@@ -1,8 +1,9 @@
 import numpy as np
 from scipy.fftpack import dct, idct
 from PIL import Image
-from utils import zigzag
+from utils import zigzag, reorderWatermark, restoreWatermark
 
+reorder_flag = True
 lena = Image.open("lena_gray.png")
 lena = lena.convert("L")
 watermark = Image.open("lsj.jpg")
@@ -19,7 +20,10 @@ for i in range(512):
             x1[0, int(idx / 2)] = lena_arr[i, j]
         else:
             x2[0, int(idx / 2)] = lena_arr[i, j]
-water_arr = water_arr.reshape(-1, )
+if reorder_flag:
+    water_arr = reorderWatermark(water_arr)
+else:
+    water_arr = water_arr.reshape(-1, )
 X1 = dct(x1, norm="ortho")
 X2 = dct(x2, norm="ortho")
 X1_ = np.copy(X1)
@@ -61,6 +65,10 @@ for i in range(100000, 120000):
         watermark_res[0, i - 100000] = 255
     else:
         watermark_res[0, i - 100000] = 0
-watermark_res = watermark_res.reshape(100, -1).astype("uint8")
+if reorder_flag:
+    tmp_res = restoreWatermark(watermark_res)
+else:
+    tmp_res = watermark_res
+watermark_res = tmp_res.reshape(100, -1).astype("uint8")
 img_water = Image.fromarray(watermark_res)
 img_water.show()
