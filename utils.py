@@ -44,3 +44,8 @@ def restoreWatermark(tmp_watermark):
     for (i, order) in zip(per.tolist(), range(N)):
         tmp_res[0, i] = tmp_watermark[0, order]
     return tmp_res
+
+def centerCrop(w, h, N, img):
+    w1 = (w - N) / 2
+    h1 = (h - N) / 2
+    return img.crop((w1, h1, w1 + N, h1 + N))

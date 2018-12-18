@@ -1,7 +1,9 @@
 from scipy.fftpack import dct, idct
 import numpy as np
 from PIL import Image
-from utils import zigzag, reorderWatermark
+from utils import zigzag, reorderWatermark, restoreWatermark, centerCrop
+
+MAX_DIM = 1040
 
 def encoder(input_file, output_file, watermark_file, reorder_flag):
     img = Image.open(input_file)
@@ -10,6 +12,9 @@ def encoder(input_file, output_file, watermark_file, reorder_flag):
     N = img_h
     if img_w < img_h:
         N = img_w
+    if N > MAX_DIM:
+        N = MAX_DIM
+    # img = centerCrop(img_w, img_h, N, img)
     watermark = Image.open(watermark_file)
     watermark = watermark.convert("L")
     watermark_w, watermark_h = watermark.size
@@ -44,7 +49,7 @@ def encoder(input_file, output_file, watermark_file, reorder_flag):
         X2_[0, i] = (X1[0, i] + X2[0, i]) / 2 - j
     x1_ = idct(X1_, norm="ortho")
     x2_ = idct(X2_, norm="ortho")
-    img_res = np.zeros(img_arr.shape)
+    img_res = np.copy(img_arr)
     for i in range(N):
         for j in range(N):
             idx = zigzag_seq[i, j] - 1
@@ -55,3 +60,39 @@ def encoder(input_file, output_file, watermark_file, reorder_flag):
     img_res = img_res.astype("uint8")
     img_res = Image.fromarray(img_res)
     img_res.save(output_file)
+
+def decoder(input_file, reorder_flag):
+    img_res = Image.open(input_file)
+    img_res = img_res.convert("L")
+    img_w, img_h = img_res.size
+    N = img_h
+    if img_w < img_h:
+        N = img_w    
+    if N > MAX_DIM:
+        N = MAX_DIM        
+    img_res = np.array(img_res)
+    zigzag_seq = zigzag(N)
+    dx1 = np.zeros((1, int(N * N / 2)))
+    dx2 = np.zeros((1, int(N * N / 2)))
+    for i in range(N):
+        for j in range(N):
+            idx = zigzag_seq[i, j] - 1
+            if idx % 2 == 0:
+                dx1[0, int(idx / 2)] = img_res[i, j]
+            else:
+                dx2[0, int(idx / 2)] = img_res[i, j]
+    dX1 = dct(dx1, norm="ortho")
+    dX2 = dct(dx2, norm="ortho")
+    watermark_res = np.zeros((1, 20000))
+    for i in range(100000, 120000):
+        if dX1[0, i] - dX2[0, i] > 0:
+            watermark_res[0, i - 100000] = 255
+        else:
+            watermark_res[0, i - 100000] = 0
+    if reorder_flag:
+        tmp_res = restoreWatermark(watermark_res)
+    else:
+        tmp_res = watermark_res
+    watermark_res = tmp_res.reshape(100, -1).astype("uint8")
+    img_water = Image.fromarray(watermark_res)
+    img_water.show()
