@@ -41,9 +41,9 @@ def encoder(input_file, output_file, watermark_file, reorder_flag):
     X2 = dct(x2, norm="ortho")
     X1_ = np.copy(X1)
     X2_ = np.copy(X2)
-    for i in range(100000, 120000):
+    for i in range(0, water_arr.shape[0]):
         j = 0
-        if water_arr[i - 100000] > 230:
+        if water_arr[i] > 230:
             j = 1
         X1_[0, i] = (X1[0, i] + X2[0, i]) / 2 + j
         X2_[0, i] = (X1[0, i] + X2[0, i]) / 2 - j
@@ -61,7 +61,7 @@ def encoder(input_file, output_file, watermark_file, reorder_flag):
     img_res = Image.fromarray(img_res)
     img_res.save(output_file)
 
-def decoder(input_file, reorder_flag):
+def decoder(input_file, watermark_w, watermark_h, reorder_flag):
     img_res = Image.open(input_file)
     img_res = img_res.convert("L")
     img_w, img_h = img_res.size
@@ -83,16 +83,16 @@ def decoder(input_file, reorder_flag):
                 dx2[0, int(idx / 2)] = img_res[i, j]
     dX1 = dct(dx1, norm="ortho")
     dX2 = dct(dx2, norm="ortho")
-    watermark_res = np.zeros((1, 20000))
-    for i in range(100000, 120000):
+    watermark_res = np.zeros((1, watermark_w * watermark_h))
+    for i in range(0, watermark_h * watermark_w):
         if dX1[0, i] - dX2[0, i] > 0:
-            watermark_res[0, i - 100000] = 255
+            watermark_res[0, i] = 255
         else:
-            watermark_res[0, i - 100000] = 0
+            watermark_res[0, i] = 0
     if reorder_flag:
         tmp_res = restoreWatermark(watermark_res)
     else:
         tmp_res = watermark_res
-    watermark_res = tmp_res.reshape(100, -1).astype("uint8")
+    watermark_res = tmp_res.reshape(watermark_h, -1).astype("uint8")
     img_water = Image.fromarray(watermark_res)
     img_water.show()
