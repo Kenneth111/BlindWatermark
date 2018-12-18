@@ -1,6 +1,5 @@
+import os
 import numpy as np
-from scipy.fftpack import dct, idct
-from PIL import Image
 from codec import encoder, decoder
 
 reorder_flag = True
